@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>DTU Uploader Telegram</title>
+    <title>DTU Uploader Pro</title>
     <link rel="icon" href="logoo.png" />
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
@@ -11,7 +11,7 @@
         :root {
             --primary: #00d2ff; --secondary: #3a7bd5; --bg: #0f172a;
             --card-bg: rgba(30, 41, 59, 0.7); --input-bg: rgba(15, 23, 42, 0.6);
-            --border: rgba(255, 255, 255, 0.1); --danger: #ef4444; --success: #10b981;
+            --border: rgba(255, 255, 255, 0.1); --danger: #ef4444; --success: #10b981; --warning: #f59e0b;
         }
 
         * { box-sizing: border-box; margin: 0; padding: 0; scrollbar-width: none; -webkit-user-select: none; user-select: none; }
@@ -32,8 +32,7 @@
             box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
         }
 
-        .header { text-align: center; }
-        h1 { color: var(--primary); font-size: clamp(1rem, 1.5vw, 1.5rem); text-transform: uppercase; letter-spacing: 1px; text-align: center; }
+        h1 { color: var(--primary); font-size: clamp(1.2rem, 1.5vw, 1.5rem); text-transform: uppercase; letter-spacing: 1px; text-align: center; }
 
         .main-content { display: grid; grid-template-columns: 350px 1fr; gap: 20px; flex: 1; min-height: 0; }
 
@@ -46,13 +45,23 @@
             padding: 12px; border-radius: 10px; color: white; outline: none; font-size: 0.9rem;
         }
 
-        .upload-options { display: flex; flex-direction: column; gap: 10px; }
-        .upload-btn {
-            border: 1px dashed var(--border); border-radius: 12px; padding: 12px;
-            text-align: center; cursor: pointer; background: rgba(255,255,255,0.02); transition: 0.3s;
+        /* Vùng Kéo Thả File Cao Cấp */
+        .drop-zone {
+            border: 2px dashed #334155; border-radius: 15px; padding: 25px 15px;
+            text-align: center; cursor: pointer; background: rgba(255,255,255,0.01);
+            transition: all 0.3s ease; display: flex; flex-direction: column; gap: 10px;
         }
-        .upload-btn:hover { border-color: var(--primary); background: rgba(0, 210, 255, 0.05); }
-        .upload-btn span { display: block; font-size: 0.8rem; font-weight: bold; }
+        .drop-zone.dragover { border-color: var(--primary); background: rgba(0, 210, 255, 0.08); transform: scale(1.02); }
+        .drop-zone span { font-size: 0.75rem; color: #94a3b8; }
+        .drop-zone b { font-size: 0.85rem; color: var(--primary); text-transform: uppercase; }
+
+        .upload-options { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+        .mini-btn {
+            background: rgba(15, 23, 42, 0.6); border: 1px solid var(--border);
+            padding: 10px; border-radius: 8px; font-size: 0.7rem; color: white;
+            cursor: pointer; text-align: center; font-weight: bold; transition: 0.2s;
+        }
+        .mini-btn:hover { border-color: var(--primary); color: var(--primary); }
 
         .stats-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; text-align: center; }
         .stat-item { background: rgba(0,0,0,0.2); padding: 8px; border-radius: 10px; font-size: 0.7rem; }
@@ -65,14 +74,23 @@
         }
         .file-list-header { padding: 12px 15px; border-bottom: 1px solid var(--border); font-size: 0.75rem; color: var(--primary); font-weight: bold; }
         #fileList { flex: 1; overflow-y: auto; padding: 10px; }
+        
+        /* Giao diện dòng File có thêm Trạng thái */
         .file-row {
-            display: flex; justify-content: space-between; align-items: center;
-            padding: 8px 12px; border-bottom: 1px solid rgba(255,255,255,0.05);
-            font-size: 0.75rem; gap: 10px;
+            display: grid; grid-template-columns: auto 1fr auto auto; align-items: center;
+            padding: 10px 12px; border-bottom: 1px solid rgba(255,255,255,0.03);
+            font-size: 0.75rem; gap: 12px; transition: background 0.2s;
         }
-        .file-info { display: flex; align-items: center; gap: 10px; flex: 1; min-width: 0; }
-        .new-name-text { color: var(--success); font-weight: bold; word-break: break-all; flex: 1; text-align: right; }
-        .btn-delete { color: var(--danger); cursor: pointer; padding: 5px; font-weight: bold; }
+        .file-row.uploading { background: rgba(245, 158, 11, 0.05); }
+        .file-row.success { background: rgba(16, 185, 129, 0.05); }
+        
+        .status-badge { font-size: 0.65rem; padding: 2px 6px; border-radius: 4px; font-weight: bold; text-transform: uppercase; }
+        .status-wait { color: #64748b; background: rgba(100, 116, 139, 0.1); }
+        .status-run { color: var(--warning); background: rgba(245, 158, 11, 0.1); }
+        .status-done { color: var(--success); background: rgba(16, 185, 129, 0.1); }
+
+        .new-name-text { color: #cbd5e1; word-break: break-all; text-align: right; font-weight: 500; }
+        .btn-delete { color: var(--danger); cursor: pointer; font-weight: bold; padding: 2px 6px; }
 
         /* Actions area */
         .bottom-area { display: flex; flex-direction: column; gap: 10px; }
@@ -82,7 +100,7 @@
             background: linear-gradient(90deg, var(--primary), var(--secondary));
             transition: 0.3s; text-transform: uppercase;
         }
-        .btn-main:disabled { background: #334155; color: #64748b; cursor: not-allowed; }
+        .btn-main:disabled { background: #334155 !important; color: #64748b; cursor: not-allowed; background-image: none !important; }
         .btn-storage {
             width: 100%; padding: 12px; border: 1px solid var(--primary); border-radius: 12px;
             color: var(--primary); font-weight: 700; cursor: pointer; font-size: 0.8rem;
@@ -98,7 +116,7 @@
             .container { height: 98vh; padding: 15px; }
             .main-content { grid-template-columns: 1fr; overflow-y: auto; display: block; }
             .left-panel { margin-bottom: 15px; }
-            .right-panel { min-height: 250px; }
+            .right-panel { min-height: 300px; }
             body { overflow-y: auto; height: auto; }
         }
     </style>
@@ -115,15 +133,16 @@
                 <input type="text" id="subjectCode" placeholder="Nhập mã môn..." oninput="normalizeInput(this)" autocomplete="off">
             </div>
 
-            <div class="upload-options">
-                <div class="upload-btn" onclick="document.getElementById('fileInput').click()">
-                    <span>📄 CHỌN TỆP</span>
-                    <input type="file" id="fileInput" multiple style="display:none" onchange="processFiles(this.files)">
+            <!-- Vùng Kéo Thả Tiện Ích -->
+            <div class="drop-zone" id="dropZone" onclick="document.getElementById('fileInput').click()">
+                <b>📁 Kéo thả tài liệu vào đây</b>
+                <span>Hoặc click trực tiếp để chọn file</span>
+                <div class="upload-options" onclick="event.stopPropagation()">
+                    <div class="mini-btn" onclick="document.getElementById('fileInput').click()">Chọn File</div>
+                    <div class="mini-btn" onclick="document.getElementById('folderInput').click()">Chọn Thư Mục</div>
                 </div>
-                <div class="upload-btn" onclick="document.getElementById('folderInput').click()">
-                    <span>📁 CHỌN THƯ MỤC</span>
-                    <input type="file" id="folderInput" webkitdirectory directory style="display:none" onchange="processFiles(this.files)">
-                </div>
+                <input type="file" id="fileInput" multiple style="display:none" onchange="processFiles(this.files)">
+                <input type="file" id="folderInput" webkitdirectory directory style="display:none" onchange="processFiles(this.files)">
             </div>
 
             <div class="stats-grid">
@@ -136,7 +155,7 @@
             <div class="bottom-area">
                 <div class="progress-bar" id="pBar"><div class="progress-fill" id="pFill"></div></div>
                 <button id="sendBtn" class="btn-main" onclick="startUpload()" disabled>GỬI DỮ LIỆU</button>
-                <a href="https://t.me/khotailieudtu/2" class="btn-storage" target="_blank">📚 KHO TÀI LIỆU</a>
+                <a href="https://t.me/Dai_Hoc_Duy_Tan" class="btn-storage" target="_blank">📚 Kênh</a>
             </div>
         </div>
 
@@ -158,7 +177,19 @@
     
     let filesArray = [];
 
-    // Hàm xóa dấu tiếng Việt và chuyển thành chữ in hoa công khai rộng rãi
+    // Kích hoạt tính năng kéo thả Drag & Drop chuột vào DropZone
+    const dropZone = document.getElementById('dropZone');
+    ['dragenter', 'dragover'].forEach(eventName => {
+        dropZone.addEventListener(eventName, (e) => { e.preventDefault(); dropZone.classList.add('dragover'); }, false);
+    });
+    ['dragleave', 'drop'].forEach(eventName => {
+        dropZone.addEventListener(eventName, (e) => { e.preventDefault(); dropZone.classList.remove('dragover'); }, false);
+    });
+    dropZone.addEventListener('drop', (e) => {
+        const dt = e.dataTransfer;
+        if(dt.files.length > 0) processFiles(dt.files);
+    });
+
     function toNoAccentsUpperCase(str) {
         return str
             .normalize('NFD')                     
@@ -167,7 +198,6 @@
             .toUpperCase();                       
     }
 
-    // Xử lý chuẩn hóa text ngay lập tức khi người dùng nhập vào ô mã môn
     function normalizeInput(inputElement) {
         inputElement.value = toNoAccentsUpperCase(inputElement.value);
         renderFiles(); 
@@ -183,21 +213,25 @@
         renderFiles();
     }
 
-    // Hàm tính toán tên file cuối cùng dựa vào việc check trùng mã môn học
+    // Làm sạch tên file gốc (Bỏ các ký tự rác hệ thống hay sinh ra)
+    function cleanFileName(name) {
+        return name
+            .replace(/_/g, ' ')
+            .replace(/-/g, ' ')
+            .replace(/\s+/g, ' ')
+            .trim();
+    }
+
     function generateFinalName(fileName, subjectCode) {
-        let cleanName = fileName.replace(/_/g, ' ');
+        let cleanName = cleanFileName(fileName);
         if (!subjectCode) return cleanName;
 
-        // Chuẩn hóa cả hai chuỗi về dạng không dấu, in hoa để so sánh chính xác nhất
         let normalizedFile = toNoAccentsUpperCase(cleanName);
         let normalizedCode = toNoAccentsUpperCase(subjectCode);
 
-        // Nếu tên file đã bắt đầu bằng mã môn học, giữ nguyên tên file đó
         if (normalizedFile.startsWith(normalizedCode)) {
             return cleanName;
         }
-        
-        // Ngược lại, thêm mã môn vào đầu
         return `${subjectCode} ${cleanName}`;
     }
 
@@ -212,7 +246,6 @@
         }
 
         filesArray.forEach((f, i) => {
-            // Sử dụng hàm kiểm tra trùng lặp thông minh để tạo tên hiển thị
             const final = generateFinalName(f.name, code);
             
             if (f.type.startsWith('image/')) c.img++;
@@ -221,12 +254,12 @@
 
             const row = document.createElement('div');
             row.className = 'file-row';
+            row.id = `file-row-${i}`; // Đặt ID cố định để đổi màu trạng thái khi gửi dữ liệu
             row.innerHTML = `
-                <div class="file-info">
-                    <span class="btn-delete" onclick="removeFile(${i})">✖</span>
-                    <span style="color:#94a3b8; overflow:hidden; text-overflow:ellipsis;">${f.name}</span>
-                </div>
+                <span class="btn-delete" onclick="removeFile(${i})">✖</span>
+                <span style="color:#94a3b8; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${f.name}</span>
                 <span class="new-name-text">➔ ${final}</span>
+                <span class="status-badge status-wait" id="status-${i}">Chờ gửi</span>
             `;
             list.appendChild(row);
         });
@@ -248,16 +281,29 @@
         const pFill = document.getElementById('pFill');
         const pBar = document.getElementById('pBar');
 
+        // Khóa các nút tương tác tránh người dùng can thiệp đè dữ liệu khi đang gửi
         btn.disabled = true; 
         pBar.style.display = 'block';
+        document.querySelectorAll('.btn-delete').forEach(el => el.style.display = 'none');
         
         let total = filesArray.length * TARGET_IDS.length;
         let count = 0;
 
-        for (const file of filesArray) {
-            // Áp dụng hàm tạo tên thông minh khi gửi dữ liệu thực tế lên Telegram
+        for (let i = 0; i < filesArray.length; i++) {
+            const file = filesArray[i];
             const finalName = generateFinalName(file.name, code);
             
+            const rowEl = document.getElementById(`file-row-${i}`);
+            const statusEl = document.getElementById(`status-${i}`);
+            
+            // Cập nhật giao diện: Đang xử lý file này
+            if(rowEl && statusEl) {
+                rowEl.className = 'file-row uploading';
+                statusEl.className = 'status-badge status-run';
+                statusEl.innerText = 'Đang gửi...';
+                rowEl.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+            }
+
             let method = "sendDocument"; 
             let field = "document";
 
@@ -280,7 +326,9 @@
 
                         if (response.status === 429) {
                             const retryAfter = (resData.parameters && resData.parameters.retry_after) ? resData.parameters.retry_after : 10;
+                            if(statusEl) statusEl.innerText = `Chờ hạn mức (${retryAfter}s)`;
                             await sleep((retryAfter + 2) * 1000); 
+                            if(statusEl) statusEl.innerText = 'Đang thử lại...';
                             continue; 
                         }
 
@@ -297,13 +345,22 @@
 
                     } catch (e) { 
                         console.error("Network Error:", e);
+                        if(statusEl) statusEl.innerText = 'Mất mạng, thử lại...';
                         await sleep(5000); 
                     }
                 }
             }
+
+            // Gửi xong cả 2 kênh -> Chuyển dòng sang màu xanh hoàn tất
+            if(rowEl && statusEl) {
+                rowEl.className = 'file-row success';
+                statusEl.className = 'status-badge status-done';
+                statusEl.innerText = 'Xong ✓';
+            }
         }
 
-        Swal.fire({ icon: 'success', title: 'Hoàn tất gửi dữ liệu!', background: '#1e293b', color: '#fff' });
+        await sleep(500);
+        Swal.fire({ icon: 'success', title: 'Hoàn tất toàn bộ hàng đợi!', background: '#1e293b', color: '#fff' });
         btn.disabled = false; 
         pBar.style.display = 'none'; 
         pFill.style.width = '0%';
