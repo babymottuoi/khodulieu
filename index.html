@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>DTU Uploader Telegam</title>
+    <title>DTU Uploader Telegram</title>
     <link rel="icon" href="logoo.png" />
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
@@ -33,7 +33,7 @@
         }
 
         .header { text-align: center; }
-        h1 { color: var(--primary); font-size: clamp(1rem, 1vw, 1rem); text-transform: uppercase; letter-spacing: 1px;text-align: center; }
+        h1 { color: var(--primary); font-size: clamp(1rem, 1.5vw, 1.5rem); text-transform: uppercase; letter-spacing: 1px; text-align: center; }
 
         .main-content { display: grid; grid-template-columns: 350px 1fr; gap: 20px; flex: 1; min-height: 0; }
 
@@ -82,6 +82,7 @@
             background: linear-gradient(90deg, var(--primary), var(--secondary));
             transition: 0.3s; text-transform: uppercase;
         }
+        .btn-main:disabled { background: #334155; color: #64748b; cursor: not-allowed; }
         .btn-storage {
             width: 100%; padding: 12px; border: 1px solid var(--primary); border-radius: 12px;
             color: var(--primary); font-weight: 700; cursor: pointer; font-size: 0.8rem;
@@ -105,13 +106,13 @@
 <body>
 
 <div class="container">
-    <h1>Telegam</h1>
+    <h1>Telegram Uploader</h1>
 
     <div class="main-content">
         <div class="left-panel">
             <div class="config-box">
                 <label>MÃ MÔN HỌC (VD: ENG 258)</label>
-                <input type="text" id="subjectCode" placeholder="Nhập mã môn..." oninput="renderFiles()" autocomplete="off">
+                <input type="text" id="subjectCode" placeholder="Nhập mã môn..." oninput="normalizeInput(this)" autocomplete="off">
             </div>
 
             <div class="upload-options">
@@ -157,6 +158,21 @@
     
     let filesArray = [];
 
+    // Hàm xóa dấu tiếng Việt và chuyển thành chữ in hoa công khai rộng rãi
+    function toNoAccentsUpperCase(str) {
+        return str
+            .normalize('NFD')                     
+            .replace(/[\u0300-\u036f]/g, '')     
+            .replace(/đ/g, 'd').replace(/Đ/g, 'D') 
+            .toUpperCase();                       
+    }
+
+    // Xử lý chuẩn hóa text ngay lập tức khi người dùng nhập vào ô mã môn
+    function normalizeInput(inputElement) {
+        inputElement.value = toNoAccentsUpperCase(inputElement.value);
+        renderFiles(); 
+    }
+
     function processFiles(files) {
         filesArray = [...filesArray, ...Array.from(files)];
         renderFiles();
@@ -165,6 +181,24 @@
     function removeFile(index) {
         filesArray.splice(index, 1);
         renderFiles();
+    }
+
+    // Hàm tính toán tên file cuối cùng dựa vào việc check trùng mã môn học
+    function generateFinalName(fileName, subjectCode) {
+        let cleanName = fileName.replace(/_/g, ' ');
+        if (!subjectCode) return cleanName;
+
+        // Chuẩn hóa cả hai chuỗi về dạng không dấu, in hoa để so sánh chính xác nhất
+        let normalizedFile = toNoAccentsUpperCase(cleanName);
+        let normalizedCode = toNoAccentsUpperCase(subjectCode);
+
+        // Nếu tên file đã bắt đầu bằng mã môn học, giữ nguyên tên file đó
+        if (normalizedFile.startsWith(normalizedCode)) {
+            return cleanName;
+        }
+        
+        // Ngược lại, thêm mã môn vào đầu
+        return `${subjectCode} ${cleanName}`;
     }
 
     function renderFiles() {
@@ -178,7 +212,9 @@
         }
 
         filesArray.forEach((f, i) => {
-            const final = code ? `${code} ${f.name.replace(/_/g, ' ')}` : f.name.replace(/_/g, ' ');
+            // Sử dụng hàm kiểm tra trùng lặp thông minh để tạo tên hiển thị
+            const final = generateFinalName(f.name, code);
+            
             if (f.type.startsWith('image/')) c.img++;
             else if (f.type.startsWith('video/')) c.vid++;
             else c.doc++;
@@ -202,7 +238,6 @@
         document.getElementById('sendBtn').disabled = filesArray.length === 0;
     }
 
-    // Hàm delay chống spam
     const sleep = (ms) => new Promise(resolve => setTimeout(resolve, ms));
 
     async function startUpload() {
@@ -213,43 +248,67 @@
         const pFill = document.getElementById('pFill');
         const pBar = document.getElementById('pBar');
 
-        btn.disabled = true; pBar.style.display = 'block';
-        let total = filesArray.length * TARGET_IDS.length, count = 0;
+        btn.disabled = true; 
+        pBar.style.display = 'block';
+        
+        let total = filesArray.length * TARGET_IDS.length;
+        let count = 0;
 
         for (const file of filesArray) {
-            const finalName = `${code} ${file.name.replace(/_/g, ' ')}`;
-            let method = "sendDocument", field = "document";
-            if (file.type.startsWith('image/')) { method = "sendPhoto"; field = "photo"; }
-            else if (file.type.startsWith('video/')) { method = "sendVideo"; field = "video"; }
+            // Áp dụng hàm tạo tên thông minh khi gửi dữ liệu thực tế lên Telegram
+            const finalName = generateFinalName(file.name, code);
+            
+            let method = "sendDocument"; 
+            let field = "document";
 
             for (const id of TARGET_IDS) {
-                try {
-                    const fd = new FormData();
-                    fd.append('chat_id', id);
-                    fd.append(field, file);
-                    // Thêm dấu thời gian nhỏ vào caption để chống trùng lặp nội dung hoàn toàn
-                    fd.append('caption', `📁 File: ${finalName}`);
+                let success = false;
+                
+                while (!success) {
+                    try {
+                        const fd = new FormData();
+                        fd.append('chat_id', id);
+                        fd.append(field, file);
+                        fd.append('caption', `📁 File: ${finalName}`);
 
-                    const response = await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/${method}`, { method: 'POST', body: fd });
-                    
-                    if (response.status === 429) {
-                        const retryAfter = (await response.json()).parameters.retry_after || 5;
-                        await sleep(retryAfter * 1000); // Chờ đúng thời gian Telegram yêu cầu
+                        const response = await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/${method}`, { 
+                            method: 'POST', 
+                            body: fd 
+                        });
+                        
+                        const resData = await response.json();
+
+                        if (response.status === 429) {
+                            const retryAfter = (resData.parameters && resData.parameters.retry_after) ? resData.parameters.retry_after : 10;
+                            await sleep((retryAfter + 2) * 1000); 
+                            continue; 
+                        }
+
+                        if (!response.ok) {
+                            console.error("Telegram API Error:", resData);
+                            break; 
+                        }
+
+                        success = true;
+                        count++;
+                        pFill.style.width = Math.round((count / total) * 100) + '%';
+                        
+                        await sleep(1000); 
+
+                    } catch (e) { 
+                        console.error("Network Error:", e);
+                        await sleep(5000); 
                     }
-
-                    count++;
-                    pFill.style.width = Math.round((count / total) * 100) + '%';
-                    
-                    // Delay an toàn giữa các lần gửi (350ms)
-                    await sleep(350); 
-
-                } catch (e) { console.error(e); }
+                }
             }
         }
 
-        Swal.fire({ icon: 'success', title: 'Hoàn tất!', background: '#1e293b', color: '#fff' });
-        btn.disabled = false; pBar.style.display = 'none'; pFill.style.width = '0%';
-        filesArray = []; renderFiles();
+        Swal.fire({ icon: 'success', title: 'Hoàn tất gửi dữ liệu!', background: '#1e293b', color: '#fff' });
+        btn.disabled = false; 
+        pBar.style.display = 'none'; 
+        pFill.style.width = '0%';
+        filesArray = []; 
+        renderFiles();
     }
 
     document.addEventListener('contextmenu', e => e.preventDefault());
